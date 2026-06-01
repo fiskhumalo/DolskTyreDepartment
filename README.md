@@ -2,8 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A backend service for **Dolsk Tyre Department**, a web application for selling tyres online with integrated tyre insurance and order management.
-
+ A web platform that enables users (especially e-hailing drivers and fleets) to purchase affordable tyres online and access tyre insurance for long-term cost protection.
 ---
 
 ## Table of Contents
