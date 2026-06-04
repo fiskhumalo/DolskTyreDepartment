@@ -1,19 +1,27 @@
 package com.dolsk.tyres.model;
 
-
 import jakarta.persistence.*;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Entity
-@RequiredArgsConstructor
+@Table(name = "cart_items")
 @Data
+@NoArgsConstructor
 public class CartItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne private Cart cart;
-    @ManyToOne private Tyre tyre;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cart_id", nullable = false)
+    private Cart cart;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tyre_id", nullable = false)
+    private Tyre tyre;
+
+    @Column(nullable = false)
     private int quantity;
 }
-

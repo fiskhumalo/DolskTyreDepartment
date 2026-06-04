@@ -1,28 +1,36 @@
 package com.dolsk.tyres.model;
 
-
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "orders")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "orders")
 public class Order {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
-    @ManyToOne(fetch = FetchType.EAGER) // fetch immediately
-    @JoinColumn(name = "user_id")       // match DB foreign key
+    // LAZY: only loaded when accessed, preventing N+1 on list queries.
+    // Safe because the service mapper is called inside a @Transactional method.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "tyre_id")       // match DB foreign key
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tyre_id", nullable = false)
     private Tyre tyre;
 
+    @Column(nullable = false)
     private Integer quantity;
+
+    @Column(nullable = false)
     private LocalDateTime orderDate;
 }

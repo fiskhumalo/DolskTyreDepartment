@@ -1,26 +1,35 @@
 package com.dolsk.tyres.model;
 
-
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
-
 @Entity
-@Data @NoArgsConstructor @AllArgsConstructor
 @Table(name = "tyres")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Tyre {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String brand;
+
+    @Column(nullable = false)
     private String size;
+
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
-    @jakarta.persistence.Column(length = 1000)
+    @Column(length = 1000)
     private String description;
 
-    @jakarta.persistence.Column(name = "image_url")
+    @Column(name = "image_url")
     private String imageUrl;
 }

@@ -3,67 +3,62 @@ package com.dolsk.tyres.controller;
 import com.dolsk.tyres.dto.ApiResponse;
 import com.dolsk.tyres.dto.TyreDTO;
 import com.dolsk.tyres.service.service.TyreService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
+/**
+ * Tyre catalogue endpoints.
+ *
+ * Read operations: any authenticated user.
+ * Write operations: ROLE_ADMIN only (enforced via @PreAuthorize).
+ *
+ * No try/catch — exceptions propagate to GlobalExceptionHandler.
+ */
 @RestController
 @RequestMapping("/api/tyres")
 @RequiredArgsConstructor
 public class TyreController {
-  private final TyreService tyreService;
 
-  @GetMapping
-  public ResponseEntity<ApiResponse<List<TyreDTO>>> list() {
-    List<TyreDTO> dtos = tyreService.getAll();
-    return ResponseEntity.ok(new ApiResponse<>(true, dtos, null));
-  }
+    private final TyreService tyreService;
 
-  @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<TyreDTO>> get(@PathVariable Long id) {
-    TyreDTO dto = tyreService.getById(id);
-    return ResponseEntity.ok(new ApiResponse<>(true, dto, null));
-  }
-
-  @PostMapping
-  public ResponseEntity<ApiResponse<TyreDTO>> create(@Validated @RequestBody TyreDTO dto) {
-    TyreDTO created = tyreService.create(dto);
-    return ResponseEntity.ok(new ApiResponse<>(true, created, null));
-  }
-
-  @PutMapping("/{id}")
-  public ResponseEntity<ApiResponse<TyreDTO>> update(
-          @PathVariable Long id,
-          @Validated @RequestBody TyreDTO dto) {
-
-    try {
-      TyreDTO updatedTyre = tyreService.update(id, dto);
-      return ResponseEntity.ok(
-              new ApiResponse<>(true, updatedTyre, "Tyre with id " + id + " has been successfully updated")
-      );
-    } catch (IllegalStateException ex) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND)
-              .body(new ApiResponse<>(false, null, ex.getMessage()));
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<TyreDTO>>> list() {
+        return ResponseEntity.ok(ApiResponse.ok(tyreService.getAll()));
     }
-  }
 
-
-  @DeleteMapping("/{id}")
-  public ResponseEntity<ApiResponse<Void>> deleteTyre(@PathVariable Long id) {
-    try {
-      boolean deleted = tyreService.delete(id);
-      if (!deleted) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ApiResponse<>(false, null, "Tyre not found"));
-      }
-      return ResponseEntity.ok(new ApiResponse<>(true, null,  "Tyre with id " + id + " has been successfully deleted"));
-    } catch (IllegalStateException ex) {
-      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-              .body(new ApiResponse<>(false, null, ex.getMessage()));
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<TyreDTO>> get(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(tyreService.getById(id)));
     }
-  }}
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<TyreDTO>> create(@Valid @RequestBody TyreDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(tyreService.create(dto)));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<TyreDTO>> update(
+            @PathVariable Long id,
+            @Valid @RequestBody TyreDTO dto) {
+        TyreDTO updated = tyreService.update(id, dto);
+        return ResponseEntity.ok(
+                ApiResponse.ok(updated, "Tyre with id " + id + " has been successfully updated"));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+        tyreService.delete(id);
+        return ResponseEntity.ok(
+                ApiResponse.ok(null, "Tyre with id " + id + " has been successfully deleted"));
+    }
+}
