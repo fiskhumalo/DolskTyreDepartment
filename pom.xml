@@ -1,6 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.dolsk</groupId>
@@ -11,11 +12,6 @@
   <name>Dolsk Tyre Backend</name>
   <description>Backend for Tyre Selling Platform</description>
 
-  <properties>
-    <java.version>17</java.version>
-    <spring-boot.version>3.2.4</spring-boot.version>
-  </properties>
-
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
@@ -23,18 +19,25 @@
     <relativePath/>
   </parent>
 
+  <properties>
+    <java.version>17</java.version>
+  </properties>
+
   <dependencies>
-    <!-- Spring Boot Starters -->
+
+    <!-- Spring Boot Web -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
+    <!-- Spring Security -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-security</artifactId>
     </dependency>
 
+    <!-- Spring Data JPA -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -47,7 +50,7 @@
       <version>42.7.1</version>
     </dependency>
 
-    <!-- JWT (latest modular dependencies) -->
+    <!-- JWT -->
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-api</artifactId>
@@ -61,13 +64,19 @@
     </dependency>
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
-      <artifactId>jjwt-jackson</artifactId> <!-- or jjwt-gson if you prefer -->
+      <artifactId>jjwt-jackson</artifactId>
       <version>0.11.5</version>
       <scope>runtime</scope>
     </dependency>
 
+    <!-- Validation -->
+    <dependency>
+      <groupId>jakarta.validation</groupId>
+      <artifactId>jakarta.validation-api</artifactId>
+      <version>3.0.2</version>
+    </dependency>
 
-    <!-- JAXB for Java 11+ -->
+    <!-- JAXB -->
     <dependency>
       <groupId>jakarta.xml.bind</groupId>
       <artifactId>jakarta.xml.bind-api</artifactId>
@@ -79,30 +88,32 @@
       <version>3.0.2</version>
     </dependency>
 
-    <!-- Jakarta Validation API -->
-    <dependency>
-      <groupId>jakarta.validation</groupId>
-      <artifactId>jakarta.validation-api</artifactId>
-      <version>3.0.2</version>
-    </dependency>
-
-    <!-- Jakarta Servlet API (provided) -->
+    <!-- Servlet API -->
     <dependency>
       <groupId>jakarta.servlet</groupId>
       <artifactId>jakarta.servlet-api</artifactId>
       <scope>provided</scope>
     </dependency>
+
+    <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
+      <optional>true</optional>
     </dependency>
-
 
   </dependencies>
 
-    <build>
-      <plugins>
-        <!-- Maven Compiler Plugin -->
+  <build>
+    <plugins>
+
+      <!-- Spring Boot Plugin (CRITICAL FOR RENDER) -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- Compiler -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -112,6 +123,8 @@
           <target>${java.version}</target>
         </configuration>
       </plugin>
+
     </plugins>
   </build>
+
 </project>
