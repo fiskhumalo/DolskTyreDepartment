@@ -1,127 +1,158 @@
-# Dolsk Tyre Department
+# Dolsk Tyre Department — Backend
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
- A web platform that enables users (especially e-hailing drivers and fleets) to purchase affordable tyres online and access tyre insurance for long-term cost protection.
----
+Spring Boot REST API for the Dolsk Tyre platform. Handles authentication, tyre catalogue
+management, cart, and orders.
 
-## Table of Contents
-
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Setup & Run](#setup--run)
-- [API Endpoints](#api-endpoints)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## Features
-
-- Online tyre catalog and sales
-- Tyre insurance management
-- Order processing and tracking
-- Cart management for e-hailing drivers
-- User authentication and role-based access
-- Payment tracking (optional integration)
-- Global exception handling
+> **Frontend** lives in a separate repository: `dolsk-tyre-frontend`
 
 ---
 
 ## Tech Stack
 
-- **Backend:** Java Spring Boot
-- **Database:** PostgreSQL
-- **Security:** Spring Security, JWT
-- **Build Tool:** Maven
-- **Version Control:** Git/GitHub
+| Layer       | Technology                         |
+|-------------|------------------------------------|
+| Runtime     | Java 17                            |
+| Framework   | Spring Boot 3.2.4                  |
+| Security    | Spring Security + JWT (JJWT 0.11)  |
+| Persistence | Spring Data JPA + Hibernate        |
+| Database    | PostgreSQL                         |
+| Build       | Maven                              |
 
 ---
 
 ## Project Structure
 
-```text
-src/
-├─ main/
-│  ├─ java/com/dolsk/tyres/
-│  │  ├─ config/             # Security & service configuration
-│  │  ├─ controller/         # REST API controllers
-│  │  ├─ dto/                # Data transfer objects
-│  │  ├─ exception/          # Custom exceptions & handlers
-│  │  ├─ model/              # Entity models
-│  │  ├─ repository/         # JPA repositories
-│  │  ├─ security/           # JWT & authentication filters
-│  │  ├─ service/impl/       # Service implementations
-│  │  ├─ service/service/    # Service interfaces
-│  │  ├─ util/               # Utility classes (e.g., PasswordHelper)
-│  │  └─ DolskTyreApplication.java
-│  └─ resources/
-│     ├─ application.properties
-│     └─ data.sql
-├─ test/                      # Unit & integration tests
-Setup & Run
-Clone the repo:
+```
+dolsk-tyre-backend/
+├── src/
+│   └── main/
+│       ├── java/com/dolsk/tyres/
+│       │   ├── config/          # SecurityConfig (CORS, JWT filter chain)
+│       │   ├── controller/      # REST controllers
+│       │   ├── dto/             # Request / response DTOs
+│       │   ├── exception/       # Custom exceptions + GlobalExceptionHandler
+│       │   ├── model/           # JPA entities
+│       │   ├── repository/      # Spring Data repositories
+│       │   ├── security/        # JwtUtil, JwtAuthFilter, UserDetailsService
+│       │   └── service/         # Service interfaces + implementations
+│       └── resources/
+│           └── application.properties
+└── pom.xml
+```
 
-bash
-Copy code
-git clone https://github.com/fiskhumalo/DolskTyreDepartment.git
-cd dolsk-tyre-backend
-Configure PostgreSQL database in application.properties.
+---
 
-Build the project using Maven:
+## API Endpoints
 
-bash
-Copy code
-mvn clean install
-Run the Spring Boot application:
+### Auth — public, no token required
 
-bash
-Copy code
+| Method | Path               | Description        |
+|--------|--------------------|--------------------|
+| POST   | /api/auth/signup   | Register new user  |
+| POST   | /api/auth/login    | Login, returns JWT |
+
+Response shape for both:
+```json
+{
+  "success": true,
+  "data": { "token": "eyJ...", "userId": 1, "role": "ROLE_USER" },
+  "message": null
+}
+```
+
+### Tyres — authenticated
+
+| Method | Path            | Role  | Description      |
+|--------|-----------------|-------|------------------|
+| GET    | /api/tyres      | Any   | List all tyres   |
+| GET    | /api/tyres/{id} | Any   | Get tyre by ID   |
+| POST   | /api/tyres      | ADMIN | Create tyre      |
+| PUT    | /api/tyres/{id} | ADMIN | Update tyre      |
+| DELETE | /api/tyres/{id} | ADMIN | Delete tyre      |
+
+### Cart — authenticated
+
+| Method | Path                         | Description       |
+|--------|------------------------------|-------------------|
+| GET    | /api/cart/{userId}           | Get cart          |
+| POST   | /api/cart/{userId}/add       | Add item          |
+| DELETE | /api/cart/{userId}/item/{id} | Remove item       |
+| DELETE | /api/cart/{userId}/clear     | Clear cart        |
+
+### Orders — authenticated
+
+| Method | Path             | Role  | Description         |
+|--------|------------------|-------|---------------------|
+| POST   | /api/orders      | Any   | Place order         |
+| GET    | /api/orders      | Any   | Get my orders       |
+| GET    | /api/orders/all  | ADMIN | Get all orders      |
+| DELETE | /api/orders/{id} | ADMIN | Delete order        |
+
+---
+
+## Setup & Run
+
+### Prerequisites
+- Java 17+
+- Maven 3.8+
+- PostgreSQL (default: `localhost:5433`, database `dolskTyresProject`)
+
+### Configuration
+
+All sensitive values are read from environment variables with local fallbacks:
+
+| Property        | Env var         | Default                                      |
+|-----------------|-----------------|----------------------------------------------|
+| DB URL          | `DB_URL`        | `jdbc:postgresql://localhost:5433/dolskTyresProject` |
+| DB username     | `DB_USERNAME`   | `postgres`                                   |
+| DB password     | `DB_PASSWORD`   | *(set locally)*                              |
+| JWT secret      | `JWT_SECRET`    | *(set locally, min 32 chars)*                |
+| JWT expiry (ms) | `JWT_EXPIRATION_MS` | `604800000` (7 days)                     |
+| CORS origins    | `ALLOWED_ORIGINS` | `http://localhost:8081`                    |
+
+### Run locally
+
+```bash
 mvn spring-boot:run
-Access APIs at: http://localhost:8080/api/...
+```
 
-API Endpoints (Overview)
-Auth
-POST /api/auth/signup - Register user
+API available at `http://localhost:8080/api/...`
 
-POST /api/auth/login - Login user
+### Deploy to Render
 
-Tyres
-GET /api/tyres - Get all tyres
+1. Push this repo (Java only, no Node files)
+2. Render auto-detects Java via `pom.xml`
+3. Build command: `mvn clean package -DskipTests`
+4. Start command: `java -jar target/dolsk-tyre-backend-1.0.0.jar`
+5. Set environment variables in Render dashboard
 
-POST /api/tyres - Add a new tyre
+---
 
-PUT /api/tyres/{id} - Update tyre
+## Authentication
 
-DELETE /api/tyres/{id} - Delete tyre
+All protected endpoints require:
+```
+Authorization: Bearer <token>
+```
 
-Orders
-POST /api/orders - Place order
+`@PreAuthorize("hasRole('ADMIN')")` enforces admin-only routes server-side.
+The filter chain uses `SessionCreationPolicy.STATELESS` — no server sessions.
 
-GET /api/orders/{id} - Get order by ID
+---
 
-Cart
-POST /api/cart/{userId}/add - Add tyre to cart
+## Response Envelope
 
-GET /api/cart/{userId} - Get cart
+Every endpoint returns the same wrapper:
 
-DELETE /api/cart/{userId}/clear - Clear cart
+```json
+{ "success": true,  "data": { ... }, "message": null   }
+{ "success": false, "data": null,    "message": "reason" }
+```
 
-Full API documentation should be added separately (Swagger recommended).
+---
 
-Contributing
-Fork the repository
+## License
 
-Create your feature branch: git checkout -b feature/my-feature
-
-Commit your changes: git commit -m "Add some feature"
-
-Push to branch: git push origin feature/my-feature
-
-Open a Pull Request
-
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-
+MIT — see [LICENSE](LICENSE).

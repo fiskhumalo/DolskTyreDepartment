@@ -41,7 +41,7 @@ public class AuthServiceImpl implements AuthService {
 
         // Load via service so UserDetails reflects actual DB state (role included)
         UserDetails userDetails = userDetailsService.loadUserByUsername(newUser.getUsername());
-        return new AuthResponse(jwtUtil.generateToken(userDetails));
+        return new AuthResponse(jwtUtil.generateToken(userDetails), newUser.getId(), newUser.getRole());
     }
 
     @Override
@@ -57,6 +57,6 @@ public class AuthServiceImpl implements AuthService {
 
         // Load real UserDetails (correct role from DB) before issuing token
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-        return new AuthResponse(jwtUtil.generateToken(userDetails));
+        return new AuthResponse(jwtUtil.generateToken(userDetails), user.getId(), user.getRole());
     }
 }
