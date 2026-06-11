@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -79,9 +80,14 @@ public class SecurityConfig {
         return (request, response, authException) -> {
             response.setStatus(401);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            String body = new ObjectMapper().writeValueAsString(
-                    Map.of("success", false, "data", null, "message", "Authentication required"));
-            response.getWriter().write(body);
+            Map<String, Object> body = new HashMap<>();
+            body.put("success", false);
+            body.put("data", null);
+            body.put("message", "Authentication required");
+
+            response.getWriter().write(
+                    new ObjectMapper().writeValueAsString(body)
+            );
         };
     }
 
