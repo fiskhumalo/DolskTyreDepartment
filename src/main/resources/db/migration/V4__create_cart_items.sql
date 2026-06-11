@@ -1,5 +1,5 @@
 CREATE TABLE cart_items (
-    id SERIAL PRIMARY KEY,
+     id BIGSERIAL PRIMARY KEY,
     cart_id BIGINT,
     tyre_id BIGINT,
     quantity INT NOT NULL,

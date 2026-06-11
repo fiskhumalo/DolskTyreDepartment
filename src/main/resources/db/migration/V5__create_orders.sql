@@ -1,5 +1,5 @@
 CREATE TABLE orders (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     user_id BIGINT,
     tyre_id BIGINT,
     quantity INT,
