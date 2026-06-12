@@ -20,8 +20,6 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final TyreRepository tyreRepository;
-    // CartItemRepository removed — CartItem lifecycle is managed via Cart's
-    // CascadeType.ALL + orphanRemoval, so direct repo access is not needed.
 
     @Override
     @Transactional
@@ -46,6 +44,7 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Tyre not found with id: " + tyreId));
 
+        // If this tyre is already in the cart, increment quantity
         cart.getItems().stream()
                 .filter(item -> item.getTyre().getId().equals(tyreId))
                 .findFirst()
@@ -59,6 +58,27 @@ public class CartServiceImpl implements CartService {
                             cart.getItems().add(newItem);
                         }
                 );
+
+        return cartRepository.save(cart);
+    }
+
+    @Override
+    @Transactional
+    public Cart updateItemQuantity(Long userId, Long cartItemId, int quantity) {
+        Cart cart = getCartByUserId(userId);
+
+        CartItem item = cart.getItems().stream()
+                .filter(i -> i.getId().equals(cartItemId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Cart item not found with id: " + cartItemId));
+
+        if (quantity <= 0) {
+            // Remove item if quantity drops to zero or below
+            cart.getItems().remove(item);
+        } else {
+            item.setQuantity(quantity);
+        }
 
         return cartRepository.save(cart);
     }

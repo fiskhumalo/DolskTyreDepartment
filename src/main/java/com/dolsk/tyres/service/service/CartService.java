@@ -8,6 +8,8 @@ public interface CartService {
 
     Cart addTyreToCart(Long userId, Long tyreId, int quantity);
 
+    Cart updateItemQuantity(Long userId, Long cartItemId, int quantity);
+
     Cart removeItem(Long userId, Long cartItemId);
 
     Cart clearCart(Long userId);
