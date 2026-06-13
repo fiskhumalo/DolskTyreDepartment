@@ -1,28 +1,30 @@
 package com.dolsk.tyres.controller;
 
+import com.dolsk.tyres.dto.AddToCartRequest;
 import com.dolsk.tyres.dto.ApiResponse;
 import com.dolsk.tyres.dto.CartDTO;
-import com.dolsk.tyres.dto.CartItemDTO;
-import com.dolsk.tyres.model.Cart;
-import com.dolsk.tyres.model.CartItem;
+import com.dolsk.tyres.dto.UpdateCartItemRequest;
 import com.dolsk.tyres.model.User;
 import com.dolsk.tyres.repository.UserRepository;
 import com.dolsk.tyres.service.service.CartService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.util.stream.Collectors;
-
 /**
- * Cart endpoints — all operations are scoped to the authenticated user.
+ * Cart REST controller — production-grade, Amazon-style.
  *
- * The user is resolved from the JWT token (via @AuthenticationPrincipal),
- * NOT from a URL path parameter. This prevents cross-user data leakage.
+ * Design principles:
+ * - Thin controller: HTTP concerns only, no business logic
+ * - User resolved from JWT — no userId in URLs (IDOR-proof)
+ * - Request bodies for mutations (not query params)
+ * - Proper HTTP status codes (200, 201, 404)
+ * - Consistent ApiResponse envelope
  */
 @RestController
 @RequestMapping("/api/cart")
@@ -32,83 +34,80 @@ public class CartController {
     private final CartService cartService;
     private final UserRepository userRepository;
 
-    // ── GET /api/cart — fetch authenticated user's cart ────────────────────────
+    /**
+     * GET /api/cart
+     * Returns the authenticated user's cart with all items and computed total.
+     * Creates an empty cart automatically if the user doesn't have one.
+     */
     @GetMapping
-    public ResponseEntity<ApiResponse<CartDTO>> getMyCart(
+    public ResponseEntity<ApiResponse<CartDTO>> getCart(
             @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(ApiResponse.ok(toDto(cartService.getCartByUserId(userId))));
+        CartDTO cart = cartService.getCart(resolveUserId(userDetails));
+        return ResponseEntity.ok(ApiResponse.ok(cart));
     }
 
-    // ── Legacy: GET /api/cart/{userId} — kept for backward compatibility ──────
-    @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<CartDTO>> getCart(@PathVariable Long userId) {
-        return ResponseEntity.ok(ApiResponse.ok(toDto(cartService.getCartByUserId(userId))));
-    }
-
-    // ── POST /api/cart/items — add item to authenticated user's cart ───────────
+    /**
+     * POST /api/cart/items
+     * Adds a tyre to the cart. If the tyre is already present, quantity is added.
+     *
+     * Request body: { "tyreId": 1, "quantity": 2 }
+     * Returns: 201 Created with full cart state
+     */
     @PostMapping("/items")
     public ResponseEntity<ApiResponse<CartDTO>> addItem(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam Long tyreId,
-            @RequestParam(defaultValue = "1") int quantity) {
-        Long userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(
-                ApiResponse.ok(toDto(cartService.addTyreToCart(userId, tyreId, quantity))));
+            @Valid @RequestBody AddToCartRequest request) {
+        CartDTO cart = cartService.addItem(
+                resolveUserId(userDetails),
+                request.getTyreId(),
+                request.getQuantity());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(cart, "Item added to cart"));
     }
 
-    // ── Legacy: POST /api/cart/{userId}/add ────────────────────────────────────
-    @PostMapping("/{userId}/add")
-    public ResponseEntity<ApiResponse<CartDTO>> addToCart(
-            @PathVariable Long userId,
-            @RequestParam Long tyreId,
-            @RequestParam(defaultValue = "1") int quantity) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(toDto(cartService.addTyreToCart(userId, tyreId, quantity))));
-    }
-
-    // ── PUT /api/cart/items/{itemId} — update item quantity ────────────────────
+    /**
+     * PUT /api/cart/items/{itemId}
+     * Updates the quantity of an existing cart item.
+     * If quantity is 0, the item is removed.
+     *
+     * Request body: { "quantity": 3 }
+     * Ownership validated — item must belong to this user's cart.
+     */
     @PutMapping("/items/{itemId}")
-    public ResponseEntity<ApiResponse<CartDTO>> updateItemQuantity(
+    public ResponseEntity<ApiResponse<CartDTO>> updateItem(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long itemId,
-            @RequestParam int quantity) {
-        Long userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(
-                ApiResponse.ok(toDto(cartService.updateItemQuantity(userId, itemId, quantity))));
+            @Valid @RequestBody UpdateCartItemRequest request) {
+        CartDTO cart = cartService.updateItemQuantity(
+                resolveUserId(userDetails),
+                itemId,
+                request.getQuantity());
+        return ResponseEntity.ok(ApiResponse.ok(cart, "Cart item updated"));
     }
 
-    // ── DELETE /api/cart/items/{itemId} — remove item from cart ────────────────
+    /**
+     * DELETE /api/cart/items/{itemId}
+     * Removes a specific item from the cart.
+     * Ownership validated — item must belong to this user's cart.
+     * Returns 404 if item not found (handled by GlobalExceptionHandler).
+     */
     @DeleteMapping("/items/{itemId}")
     public ResponseEntity<ApiResponse<CartDTO>> removeItem(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long itemId) {
-        Long userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(
-                ApiResponse.ok(toDto(cartService.removeItem(userId, itemId))));
+        CartDTO cart = cartService.removeItem(resolveUserId(userDetails), itemId);
+        return ResponseEntity.ok(ApiResponse.ok(cart, "Item removed successfully"));
     }
 
-    // ── Legacy: DELETE /api/cart/{userId}/item/{itemId} ────────────────────────
-    @DeleteMapping("/{userId}/item/{itemId}")
-    public ResponseEntity<ApiResponse<CartDTO>> removeItemLegacy(
-            @PathVariable Long userId,
-            @PathVariable Long itemId) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(toDto(cartService.removeItem(userId, itemId))));
-    }
-
-    // ── DELETE /api/cart — clear entire cart ───────────────────────────────────
+    /**
+     * DELETE /api/cart
+     * Clears all items from the user's cart.
+     */
     @DeleteMapping
-    public ResponseEntity<ApiResponse<CartDTO>> clearMyCart(
+    public ResponseEntity<ApiResponse<CartDTO>> clearCart(
             @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = resolveUserId(userDetails);
-        return ResponseEntity.ok(ApiResponse.ok(toDto(cartService.clearCart(userId))));
-    }
-
-    // ── Legacy: DELETE /api/cart/{userId}/clear ────────────────────────────────
-    @DeleteMapping("/{userId}/clear")
-    public ResponseEntity<ApiResponse<CartDTO>> clearCart(@PathVariable Long userId) {
-        return ResponseEntity.ok(ApiResponse.ok(toDto(cartService.clearCart(userId))));
+        CartDTO cart = cartService.clearCart(resolveUserId(userDetails));
+        return ResponseEntity.ok(ApiResponse.ok(cart, "Cart cleared"));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -118,31 +117,5 @@ public class CartController {
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "User not found: " + userDetails.getUsername()));
         return user.getId();
-    }
-
-    private CartDTO toDto(Cart cart) {
-        CartDTO dto = new CartDTO();
-        dto.setCartId(cart.getId());
-        dto.setItems(cart.getItems().stream()
-                .map(this::toItemDto)
-                .collect(Collectors.toList()));
-        BigDecimal total = cart.getItems().stream()
-                .map(i -> i.getTyre().getPrice()
-                        .multiply(BigDecimal.valueOf(i.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        dto.setTotal(total);
-        return dto;
-    }
-
-    private CartItemDTO toItemDto(CartItem item) {
-        CartItemDTO dto = new CartItemDTO();
-        dto.setId(item.getId());
-        dto.setTyreId(item.getTyre().getId());
-        dto.setTyreBrand(item.getTyre().getBrand());
-        dto.setTyreSize(item.getTyre().getSize());
-        dto.setPrice(item.getTyre().getPrice());
-        dto.setQuantity(item.getQuantity());
-        dto.setImageUrl(item.getTyre().getImageUrl());
-        return dto;
     }
 }
