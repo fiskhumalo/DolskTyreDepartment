@@ -39,7 +39,7 @@ public class CartServiceImpl implements CartService {
     // ── Public API ────────────────────────────────────────────────────────────
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public CartDTO getCart(Long userId) {
         return toDto(getOrCreateCart(userId));
     }
