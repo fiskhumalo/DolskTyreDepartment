@@ -64,7 +64,7 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers ->
-                        headers.frameOptions(frame -> frame.disable()))
+                        headers.frameOptions(frame -> frame.deny()))
                 .authenticationManager(authenticationManager)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
