@@ -13,6 +13,8 @@ target/
 # ── Environment ───────────────────────────────────────────────────────────────
 .env
 .env.*
+application-local.properties
+src/main/resources/application-local.properties
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
