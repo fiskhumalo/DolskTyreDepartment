@@ -56,8 +56,9 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jsonAuthenticationEntryPoint())
                 )
                 .authorizeHttpRequests(auth -> auth
-                        // Public: signup and login — no token required
+                        // Public: signup, login, and health check — no token required
                         .requestMatchers("/api/auth/login", "/api/auth/signup").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Everything else requires a valid JWT
                         .anyRequest().authenticated()
                 )
