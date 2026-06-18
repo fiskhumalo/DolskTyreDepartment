@@ -1,5 +1,6 @@
 package com.dolsk.tyres.service.impl;
 
+import com.dolsk.tyres.dto.PagedResponse;
 import com.dolsk.tyres.dto.TyreDTO;
 import com.dolsk.tyres.exception.ConflictException;
 import com.dolsk.tyres.exception.ResourceNotFoundException;
@@ -8,6 +9,10 @@ import com.dolsk.tyres.repository.OrderRepository;
 import com.dolsk.tyres.repository.TyreRepository;
 import com.dolsk.tyres.service.service.TyreService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +27,6 @@ public class TyreServiceImpl implements TyreService {
     private final OrderRepository orderRepository;
 
     // ── Mapping ───────────────────────────────────────────────────────────────
-    // Lives in the service. TyreDTO has NO knowledge of the Tyre entity.
 
     private TyreDTO toDto(Tyre tyre) {
         return new TyreDTO(
@@ -57,6 +61,38 @@ public class TyreServiceImpl implements TyreService {
 
     @Override
     @Transactional(readOnly = true)
+    public PagedResponse<TyreDTO> getAllPaged(int page, int size, String sortBy, String direction, String brand) {
+        // Validate sort field — only allow known columns
+        String safeSortBy = switch (sortBy != null ? sortBy.toLowerCase() : "") {
+            case "price" -> "price";
+            case "brand" -> "brand";
+            case "size" -> "size";
+            default -> "id";
+        };
+
+        Sort sort = "desc".equalsIgnoreCase(direction)
+                ? Sort.by(safeSortBy).descending()
+                : Sort.by(safeSortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Tyre> result = tyreRepository.findAllFiltered(brand, pageable);
+
+        List<TyreDTO> content = result.getContent().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        return new PagedResponse<>(
+                content,
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TyreDTO getById(Long id) {
         return tyreRepository.findById(id)
                 .map(this::toDto)
@@ -83,7 +119,6 @@ public class TyreServiceImpl implements TyreService {
         tyre.setDescription(dto.getDescription());
         tyre.setImageUrl(dto.getImageUrl());
 
-        // No explicit save() needed — dirty checking commits changes on transaction end
         return toDto(tyre);
     }
 

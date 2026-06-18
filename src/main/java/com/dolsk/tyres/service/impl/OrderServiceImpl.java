@@ -1,6 +1,7 @@
 package com.dolsk.tyres.service.impl;
 
 import com.dolsk.tyres.dto.OrderDTO;
+import com.dolsk.tyres.dto.PagedResponse;
 import com.dolsk.tyres.exception.ResourceNotFoundException;
 import com.dolsk.tyres.model.Order;
 import com.dolsk.tyres.model.Tyre;
@@ -10,6 +11,9 @@ import com.dolsk.tyres.repository.TyreRepository;
 import com.dolsk.tyres.repository.UserRepository;
 import com.dolsk.tyres.service.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,8 +30,6 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
 
     // ── Mapping ───────────────────────────────────────────────────────────────
-    // Called inside @Transactional methods — LAZY associations (user, tyre)
-    // are safely accessible within the same open session.
 
     private OrderDTO toDto(Order order) {
         return new OrderDTO(
@@ -43,7 +45,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDTO placeOrder(OrderDTO dto, String username) {
-        // username comes from the authenticated Principal — never from the DTO
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found: " + username));
@@ -73,6 +74,26 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findAll().stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<OrderDTO> getAllOrdersPaged(int page, int size) {
+        Page<Order> result = orderRepository.findAllWithDetails(
+                PageRequest.of(page, size, Sort.by("orderDate").descending()));
+
+        List<OrderDTO> content = result.getContent().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+
+        return new PagedResponse<>(
+                content,
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.isLast()
+        );
     }
 
     @Override

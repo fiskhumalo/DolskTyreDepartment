@@ -113,7 +113,8 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with id: " + userId));
 
-        return cartRepository.findByUser(user)
+        // Uses JOIN FETCH query — loads cart + items + tyres in 1 SQL query (no N+1)
+        return cartRepository.findByUserWithItems(user)
                 .orElseGet(() -> {
                     Cart cart = new Cart();
                     cart.setUser(user);
