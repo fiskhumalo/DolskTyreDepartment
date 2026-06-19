@@ -62,7 +62,6 @@ public class TyreServiceImpl implements TyreService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<TyreDTO> getAllPaged(int page, int size, String sortBy, String direction, String brand) {
-        // Validate sort field — only allow known columns
         String safeSortBy = switch (sortBy != null ? sortBy.toLowerCase() : "") {
             case "price" -> "price";
             case "brand" -> "brand";
@@ -77,18 +76,7 @@ public class TyreServiceImpl implements TyreService {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<Tyre> result = tyreRepository.findAllFiltered(brand, pageable);
 
-        List<TyreDTO> content = result.getContent().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-
-        return new PagedResponse<>(
-                content,
-                result.getNumber(),
-                result.getSize(),
-                result.getTotalElements(),
-                result.getTotalPages(),
-                result.isLast()
-        );
+        return PagedResponse.from(result, this::toDto);
     }
 
     @Override

@@ -82,18 +82,7 @@ public class OrderServiceImpl implements OrderService {
         Page<Order> result = orderRepository.findAllWithDetails(
                 PageRequest.of(page, size, Sort.by("orderDate").descending()));
 
-        List<OrderDTO> content = result.getContent().stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
-
-        return new PagedResponse<>(
-                content,
-                result.getNumber(),
-                result.getSize(),
-                result.getTotalElements(),
-                result.getTotalPages(),
-                result.isLast()
-        );
+        return PagedResponse.from(result, this::toDto);
     }
 
     @Override
