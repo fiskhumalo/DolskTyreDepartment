@@ -11,6 +11,8 @@ import com.dolsk.tyres.repository.TyreRepository;
 import com.dolsk.tyres.repository.UserRepository;
 import com.dolsk.tyres.service.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -24,6 +26,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrderServiceImpl.class);
 
     private final OrderRepository orderRepository;
     private final TyreRepository tyreRepository;
@@ -54,7 +58,11 @@ public class OrderServiceImpl implements OrderService {
                         "Tyre not found with id: " + dto.getTyreId()));
 
         Order order = new Order(null, user, tyre, dto.getQuantity(), LocalDateTime.now());
-        return toDto(orderRepository.save(order));
+        Order saved = orderRepository.save(order);
+
+        logger.info("[AUDIT] action=PLACE_ORDER user={} orderId={} tyreId={} quantity={}",
+                username, saved.getId(), dto.getTyreId(), dto.getQuantity());
+        return toDto(saved);
     }
 
     @Override
@@ -92,5 +100,6 @@ public class OrderServiceImpl implements OrderService {
             throw new ResourceNotFoundException("Order not found with id: " + id);
         }
         orderRepository.deleteById(id);
+        logger.info("[AUDIT] action=DELETE_ORDER orderId={}", id);
     }
 }

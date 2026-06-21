@@ -9,6 +9,8 @@ import com.dolsk.tyres.repository.OrderRepository;
 import com.dolsk.tyres.repository.TyreRepository;
 import com.dolsk.tyres.service.service.TyreService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TyreServiceImpl implements TyreService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TyreServiceImpl.class);
 
     private final TyreRepository tyreRepository;
     private final OrderRepository orderRepository;
@@ -91,7 +95,10 @@ public class TyreServiceImpl implements TyreService {
     @Override
     @Transactional
     public TyreDTO create(TyreDTO dto) {
-        return toDto(tyreRepository.save(toEntity(dto)));
+        Tyre saved = tyreRepository.save(toEntity(dto));
+        logger.info("[AUDIT] action=CREATE_TYRE tyreId={} brand={} size={} price={}",
+                saved.getId(), saved.getBrand(), saved.getSize(), saved.getPrice());
+        return toDto(saved);
     }
 
     @Override
@@ -107,6 +114,8 @@ public class TyreServiceImpl implements TyreService {
         tyre.setDescription(dto.getDescription());
         tyre.setImageUrl(dto.getImageUrl());
 
+        logger.info("[AUDIT] action=UPDATE_TYRE tyreId={} brand={} price={}",
+                id, dto.getBrand(), dto.getPrice());
         return toDto(tyre);
     }
 
@@ -122,5 +131,6 @@ public class TyreServiceImpl implements TyreService {
                             + ": it is referenced by existing orders");
         }
         tyreRepository.deleteById(id);
+        logger.info("[AUDIT] action=DELETE_TYRE tyreId={}", id);
     }
 }

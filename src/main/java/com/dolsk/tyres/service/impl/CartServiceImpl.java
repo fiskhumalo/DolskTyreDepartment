@@ -12,6 +12,8 @@ import com.dolsk.tyres.repository.TyreRepository;
 import com.dolsk.tyres.repository.UserRepository;
 import com.dolsk.tyres.service.service.CartService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CartServiceImpl.class);
 
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
@@ -67,6 +71,7 @@ public class CartServiceImpl implements CartService {
                         }
                 );
 
+        logger.info("[AUDIT] action=ADD_TO_CART userId={} tyreId={} quantity={}", userId, tyreId, quantity);
         return toDto(cartRepository.save(cart));
     }
 
@@ -78,8 +83,10 @@ public class CartServiceImpl implements CartService {
 
         if (quantity <= 0) {
             cart.getItems().remove(item);
+            logger.info("[AUDIT] action=REMOVE_CART_ITEM userId={} itemId={} reason=quantity_zero", userId, itemId);
         } else {
             item.setQuantity(quantity);
+            logger.info("[AUDIT] action=UPDATE_CART_ITEM userId={} itemId={} newQuantity={}", userId, itemId, quantity);
         }
 
         return toDto(cartRepository.save(cart));
@@ -91,6 +98,7 @@ public class CartServiceImpl implements CartService {
         Cart cart = getOrCreateCart(userId);
         CartItem item = findOwnedItem(cart, itemId);
         cart.getItems().remove(item);
+        logger.info("[AUDIT] action=REMOVE_CART_ITEM userId={} itemId={}", userId, itemId);
         return toDto(cartRepository.save(cart));
     }
 
@@ -98,7 +106,9 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartDTO clearCart(Long userId) {
         Cart cart = getOrCreateCart(userId);
+        int itemCount = cart.getItems().size();
         cart.getItems().clear();
+        logger.info("[AUDIT] action=CLEAR_CART userId={} itemsRemoved={}", userId, itemCount);
         return toDto(cartRepository.save(cart));
     }
 

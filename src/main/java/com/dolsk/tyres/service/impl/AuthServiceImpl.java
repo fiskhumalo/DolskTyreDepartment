@@ -42,6 +42,8 @@ public class AuthServiceImpl implements AuthService {
         newUser.setRole("ROLE_USER");
         userRepository.save(newUser);
 
+        logger.info("[AUDIT] action=SIGNUP user={}", newUser.getUsername());
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(newUser.getUsername());
         return new AuthResponse(jwtUtil.generateToken(userDetails), newUser.getId(), newUser.getRole());
     }
@@ -52,8 +54,11 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid username or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            logger.warn("[AUDIT] action=LOGIN_FAILED user={}", request.getUsername());
             throw new UsernameNotFoundException("Invalid username or password");
         }
+
+        logger.info("[AUDIT] action=LOGIN user={} role={}", user.getUsername(), user.getRole());
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         return new AuthResponse(jwtUtil.generateToken(userDetails), user.getId(), user.getRole());
@@ -62,21 +67,18 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void changePassword(String username, ChangePasswordRequest request) {
-        // Step 1: Find the user by username (from JWT, not user input)
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException(
                         "User not found: " + username));
 
-        // Step 2: Verify the current password matches the stored hash
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            logger.warn("[AUDIT] action=PASSWORD_CHANGE_FAILED user={}", username);
             throw new UsernameNotFoundException("Current password is incorrect");
         }
 
-        // Step 3: Hash the new password and save
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Step 4: Log the event (NEVER log the actual passwords)
-        logger.info("Password changed successfully for user: {}", username);
+        logger.info("[AUDIT] action=PASSWORD_CHANGED user={}", username);
     }
 }
